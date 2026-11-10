@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CardLens HK</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout concept: a price-check bench. Inputs on the left, verdict and range bar on the right.
+   A state switch swaps Day 1 (just you) for Later (prices paid by many users). */
+:root {
+  --bg: #F1F4F2;
+  --surface: #FFFFFF;
+  --ink: #132227;
+  --muted: #55676D;
+  --line: #D6DEDB;
+  --accent: #0B6E6A;
+  --accent-soft: #D9EFEC;
+  --good: #1B7F4B;
+  --good-soft: #DDF1E5;
+  --warn: #8F5A09;
+  --warn-soft: #F8EBD0;
+  --bad: #A8301F;
+  --bad-soft: #F8DDD7;
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E191C; --surface: #15262A; --ink: #E5EEEC; --muted: #93A6A9; --line: #29403F;
+    --accent: #4CC2BA; --accent-soft: #15383A;
+    --good: #62CF95; --good-soft: #14352A; --warn: #E6AA4C; --warn-soft: #3A2D12; --bad: #F2846F; --bad-soft: #3D1E19;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E191C; --surface: #15262A; --ink: #E5EEEC; --muted: #93A6A9; --line: #29403F;
+  --accent: #4CC2BA; --accent-soft: #15383A;
+  --good: #62CF95; --good-soft: #14352A; --warn: #E6AA4C; --warn-soft: #3A2D12; --bad: #F2846F; --bad-soft: #3D1E19;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5;
+  padding-block: 20px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1080px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+h1, h2, h3 { font-family: var(--f-display); margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+h1 { font-size: 28px; line-height: 1.1; }
+h2 { font-size: 18px; }
+h3 { font-size: 15px; }
+.num, .mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+
+.top { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-end; justify-content: space-between; }
+.brand p { margin: 4px 0 0; color: var(--muted); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 3px; gap: 3px; }
+.seg button {
+  font: inherit; font-weight: 600; font-size: 14px; color: var(--muted); background: transparent; border: 0;
+  padding: 8px 14px; border-radius: 7px; cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+.seg button:focus-visible, input:focus-visible, select:focus-visible, .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.banner {
+  border: 1px dashed var(--warn); background: var(--warn-soft); color: var(--warn);
+  border-radius: 8px; padding: 8px 12px; font-size: 13px;
+}
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; min-width: 0; }
+.grid { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.stack { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+@media (max-width: 820px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+
+.field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.field label { font-size: 13px; font-weight: 500; }
+input[type="number"], select {
+  font: inherit; font-family: var(--f-mono); color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+  border-radius: 8px; padding: 8px 10px; width: 100%; min-width: 0;
+}
+select { font-family: var(--f-body); }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.checks { display: flex; flex-direction: column; gap: 6px; }
+.checks label { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+.hint { font-size: 12px; color: var(--muted); margin: 2px 0 0; }
+
+.verdict { display: flex; flex-direction: column; gap: 10px; }
+.verdict .line { font-family: var(--f-display); font-size: 22px; line-height: 1.25; font-weight: 600; text-wrap: balance; }
+.chip { display: inline-block; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 99px; width: fit-content; }
+.chip.good { background: var(--good-soft); color: var(--good); }
+.chip.warn { background: var(--warn-soft); color: var(--warn); }
+.chip.bad { background: var(--bad-soft); color: var(--bad); }
+.chip.info { background: var(--accent-soft); color: var(--accent); }
+
+/* range bar */
+.rb { position: relative; padding: 34px 20px 4px; }
+.rb-track { position: relative; height: 22px; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; }
+.rb-band { position: absolute; top: -1px; bottom: -1px; background: var(--accent-soft); border: 1.5px solid var(--accent); border-radius: 5px; min-width: 6px; }
+.rb-dot { position: absolute; top: 50%; width: 9px; height: 9px; border-radius: 50%; background: var(--ink); transform: translate(-50%, -50%); opacity: .8; }
+.rb-med { position: absolute; top: -5px; bottom: -5px; width: 2px; background: var(--ink); }
+.rb-ask { position: absolute; top: 0; height: 56px; width: 0; border-left: 2px solid var(--bad); }
+.rb-ask span { position: absolute; top: -2px; left: 0; transform: translate(-50%, -100%); font-family: var(--f-mono); font-size: 12px; font-weight: 500; white-space: nowrap; color: var(--bad); }
+.rb-ask.ok { border-color: var(--good); } .rb-ask.ok span { color: var(--good); }
+.rb-ends { display: flex; justify-content: space-between; font-family: var(--f-mono); font-size: 12px; color: var(--muted); margin-top: 6px; }
+.rb-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--muted); margin-top: 10px; }
+.rb-legend i { display: inline-block; vertical-align: -2px; margin-right: 5px; }
+.lg-band { width: 14px; height: 10px; background: var(--accent-soft); border: 1.5px solid var(--accent); border-radius: 3px; }
+.lg-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ink); opacity: .8; }
+.lg-med { width: 2px; height: 12px; background: var(--ink); }
+.lg-ask { width: 0; height: 12px; border-left: 2px solid var(--bad); }
+
+.tw { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 500; padding: 6px 10px 6px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 8px 10px 8px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+td.r, th.r { text-align: right; }
+tr.hl td { background: var(--accent-soft); }
+tr.off td { color: var(--muted); }
+
+.notnow { margin: 0; padding-left: 18px; color: var(--muted); font-size: 14px; display: flex; flex-direction: column; gap: 4px; }
+
+.loop { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.loop .count { font-family: var(--f-display); font-size: 30px; font-weight: 700; color: var(--accent); line-height: 1; }
+.cards3 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 720px) { .cards3 { grid-template-columns: minmax(0, 1fr); } }
+.cards3 > .panel { display: flex; flex-direction: column; gap: 12px; }
+.big { font-family: var(--f-mono); font-size: 30px; font-weight: 500; line-height: 1.1; }
+.bars { display: flex; flex-direction: column; gap: 8px; }
+.bar { display: grid; grid-template-columns: 96px 1fr auto; gap: 8px; align-items: center; font-size: 13px; }
+.bar .track { height: 8px; background: var(--bg); border-radius: 4px; overflow: hidden; }
+.bar .fill { height: 100%; background: var(--accent); border-radius: 4px; }
+.logform { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; align-items: end; }
+@media (max-width: 460px) { .logform { grid-template-columns: 1fr 1fr; } }
+.btn { font: inherit; font-weight: 600; font-size: 14px; background: var(--accent); color: var(--surface); border: 0; border-radius: 8px; padding: 9px 14px; cursor: pointer; }
+.status { font-size: 13px; color: var(--good); min-height: 20px; margin: 0; }
+svg.chart { width: 100%; max-width: 560px; height: auto; display: block; margin: 0 auto; }
+svg.chart text { fill: var(--muted); font-family: var(--f-mono); font-size: 11px; }
+svg.chart .grid-l { stroke: var(--line); stroke-width: 1; }
+svg.chart .c-line { stroke: var(--accent); stroke-width: 2.5; fill: none; stroke-linejoin: round; }
+svg.chart .c-area { fill: var(--accent); fill-opacity: .14; stroke: none; }
+svg.chart .c-now { stroke: var(--muted); stroke-dasharray: 3 3; stroke-width: 1; }
+svg.chart .c-ask { stroke: var(--bad); stroke-dasharray: 5 4; stroke-width: 1.5; }
+svg.chart .c-dot { fill: var(--accent); stroke: var(--surface); stroke-width: 2; }
+svg.chart text.t-ask { fill: var(--bad); }
+svg.chart text.t-now { fill: var(--ink); }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+footer.note { font-size: 12px; color: var(--muted); }
+@media (prefers-reduced-motion: no-preference) { .rb-ask, .rb-band { transition: left .2s, width .2s; } }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>CardLens HK</h1>
+      <p id="tagline"></p>
+    </div>
+    <div class="seg" role="group" aria-label="Product state">
+      <button type="button" id="btnDay1" aria-pressed="true">Day 1 · just you</button>
+      <button type="button" id="btnLater" aria-pressed="false">Later · many users</button>
+    </div>
+  </header>
+
+  <div class="banner">Demo with sample data. Prices below are illustrative and are not live market prices. The Hong Kong shop and Carousell rows stand in for a hand-collected sample.</div>
+
+  <div class="grid">
+    <section class="panel" aria-labelledby="h-in">
+      <h2 id="h-in" style="margin-bottom:14px">Check a card</h2>
+      <div class="field">
+        <label for="card">Card (Japanese version)</label>
+        <select id="card"></select>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="ask">Asking price (HK$)</label>
+          <input type="number" id="ask" min="0" step="10" value="480">
+        </div>
+        <div class="field">
+          <label for="cond">Condition</label>
+          <select id="cond">
+            <option value="NM">Near Mint</option>
+            <option value="LP">Light play</option>
+            <option value="MP">Moderate play</option>
+            <option value="HP">Heavy play</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="chan">Where is it listed?</label>
+        <select id="chan">
+          <option value="Any">Not sure</option>
+          <option value="Shop">Hong Kong shop</option>
+          <option value="Carousell">Carousell</option>
+          <option value="Telegram/IG">Telegram or Instagram</option>
+          <option value="Livestream">Livestream</option>
+        </select>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="fx">HK$ per US$</label>
+          <input type="number" id="fx" min="1" step="0.01" value="7.8">
+        </div>
+        <div class="field">
+          <label for="fee">Shipping + forwarding (HK$)</label>
+          <input type="number" id="fee" min="0" step="5" value="40">
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <span class="label" style="margin-bottom:2px">US reference prices</span>
+        <div class="checks">
+          <label><input type="checkbox" id="srcTcg" checked> TCGplayer market price</label>
+          <label><input type="checkbox" id="srcEbay" checked> eBay sold price</label>
+        </div>
+        <p class="hint">Landed cost = US$ price × exchange rate + shipping and forwarding. FX and fee are your assumptions, edit them.</p>
+      </div>
+    </section>
+
+    <div class="stack">
+      <section class="panel verdict" aria-live="polite" aria-labelledby="h-v">
+        <span class="label" id="h-v">Result for <span id="cardName"></span></span>
+        <div class="line" id="vLine"></div>
+        <span class="chip" id="vChip"></span>
+        <div id="rangeBar"></div>
+      </section>
+
+      <section class="panel">
+        <h3 style="margin-bottom:8px">US reference prices, converted to a landed cost</h3>
+        <div class="tw"><table id="usTable"></table></div>
+      </section>
+
+      <section class="panel">
+        <h3 style="margin-bottom:2px">Hong Kong asking prices in the sample</h3>
+        <p class="hint" style="margin:0 0 8px" id="hkNote"></p>
+        <div class="tw"><table id="hkTable"></table></div>
+      </section>
+
+      <section class="panel" id="notShown">
+        <h3 style="margin-bottom:8px">What Day 1 does not show</h3>
+        <ul class="notnow">
+          <li>What buyers in Hong Kong actually paid. The sample holds asking prices only.</li>
+          <li>Japan-domestic prices (SNKRDUNK, Mercari, Yahoo Auctions). The "Japanese card" prices above come from the US import market.</li>
+          <li>A condition adjustment. The US prices are for Near Mint copies.</li>
+          <li>Short-term hype after a release. Newly released cards can sit well above landed cost for weeks.</li>
+        </ul>
+      </section>
+    </div>
+  </div>
+
+  <section id="later" hidden aria-labelledby="h-later">
+    <div class="panel loop" style="margin-bottom:16px">
+      <div class="count num" id="totalN">0</div>
+      <div style="flex:1; min-width: 220px">
+        <h2 id="h-later">Prices paid in Hong Kong, logged by users</h2>
+        <p class="muted small" style="margin:2px 0 0">Every logged price sharpens the next person's check. The three features below only work once enough users have logged what they paid. Rows here are generated for the demo.</p>
+      </div>
+    </div>
+    <div class="cards3">
+      <div class="panel" id="paidPanel"></div>
+      <div class="panel" id="condPanel"></div>
+      <div class="panel" id="hypePanel" style="grid-column: 1 / -1"></div>
+    </div>
+  </section>
+
+  <footer class="note">Built for ISOM2010. Day 1 inputs: US reference prices (free APIs), a hand-collected Hong Kong sample, your own FX and fee assumptions. Later inputs: prices paid, logged by users.</footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ------------------------------------------------------------------ *
+   * SAMPLE DATA. Replace with collected data before using real numbers.
+   * us prices: US$, Near Mint raw. hk: asking prices collected by hand.
+   * amp scales the illustrative post-release hype curve per card.
+   * ------------------------------------------------------------------ */
+  var CARDS = [
+    { id: "venusaur", name: "Venusaur ex SAR", set: "Pokémon Card 151", tcg: 40, ebay: 46, amp: 0.9,
+      hk: [["Shop A (Mong Kok)", "Shop", 420], ["Shop B (Sham Shui Po)", "Shop", 450], ["Carousell listing 1", "Carousell", 380], ["Carousell listing 2", "Carousell", 399]] },
+    { id: "blastoise", name: "Blastoise ex SAR", set: "Pokémon Card 151", tcg: 48, ebay: 55, amp: 0.9,
+      hk: [["Shop A (Mong Kok)", "Shop", 480], ["Shop B (Sham Shui Po)", "Shop", 520], ["Carousell listing 1", "Carousell", 450], ["Carousell listing 2", "Carousell", 470]] },
+    { id: "mew", name: "Mew ex SAR", set: "Pokémon Card 151", tcg: 55, ebay: 62, amp: 1.0,
+      hk: [["Shop A (Mong Kok)", "Shop", 550], ["Shop B (Sham Shui Po)", "Shop", 590], ["Carousell listing 1", "Carousell", 500], ["Carousell listing 2", "Carousell", 520]] },
+    { id: "erika", name: "Erika's Invitation SAR", set: "Pokémon Card 151", tcg: 85, ebay: 96, amp: 0.8,
+      hk: [["Shop A (Mong Kok)", "Shop", 830], ["Shop B (Sham Shui Po)", "Shop", 880], ["Carousell listing 1", "Carousell", 760], ["Carousell listing 2", "Carousell", 790]] },
+    { id: "pikachu", name: "Pikachu ex SAR", set: "Terastal Festival ex", tcg: 95, ebay: 108, amp: 1.1,
+      hk: [["Shop A (Mong Kok)", "Shop", 920], ["Shop B (Sham Shui Po)", "Shop", 980], ["Carousell listing 1", "Carousell", 850], ["Carousell listing 2", "Carousell", 880]] },
+    { id: "charizard", name: "Charizard ex SAR", set: "Terastal Festival ex", tcg: 180, ebay: 205, amp: 1.3,
+      hk: [["Shop A (Mong Kok)", "Shop", 1680], ["Shop B (Sham Shui Po)", "Shop", 1750], ["Carousell listing 1", "Carousell", 1520], ["Carousell listing 2", "Carousell", 1580]] }
+  ];
+  var SAMPLE_DATE = "Nov 2026, sample";
+  var CHANNELS = ["Shop", "Carousell", "Telegram/IG", "Livestream"];
+  var CONDS = ["NM", "LP", "MP", "HP"];
+  var COND_NAME = { NM: "Near Mint", LP: "Light play", MP: "Moderate play", HP: "Heavy play" };
+  /* Illustrative hype curve: premium over landed cost, by weeks since release. */
+  var HYPE = [[0, 70], [1, 55], [2, 42], [3, 32], [4, 25], [6, 16], [8, 11], [12, 8]];
+
+  /* ----- helpers ----- */
+  function $(id) { return document.getElementById(id); }
+  function money(v) { return "HK$" + Math.round(v).toLocaleString("en-US"); }
+  function median(a) {
+    if (!a.length) return null;
+    var s = a.slice().sort(function (x, y) { return x - y; }), m = Math.floor(s.length / 2);
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+  }
+  function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function cardById(id) { return CARDS.filter(function (c) { return c.id === id; })[0]; }
+  function hype(w, amp) {
+    var i;
+    for (i = 0; i < HYPE.length - 1; i++) {
+      if (w <= HYPE[i + 1][0]) {
+        var a = HYPE[i], b = HYPE[i + 1], t = (w - a[0]) / (b[0] - a[0]);
+        return (a[1] + (b[1] - a[1]) * t) * amp;
+      }
+    }
+    return HYPE[HYPE.length - 1][1] * amp;
+  }
+
+  /* ----- generated "paid price" rows (deterministic), stand-in for user logs ----- */
+  function rng(seed) { return function () { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; var t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+  var CH_MULT = { "Shop": 1.05, "Carousell": 0.97, "Telegram/IG": 0.93, "Livestream": 1.02 };
+  var COND_MULT = { NM: 1, LP: 0.86, MP: 0.71, HP: 0.52 };
+  var PAID = {};
+  CARDS.forEach(function (c, i) {
+    var r = rng(1000 + i * 77), rows = [], n = 14 + Math.floor(r() * 14);
+    var mid = ((Math.min(c.tcg, c.ebay) + Math.max(c.tcg, c.ebay)) / 2) * 7.8 + 40;
+    var base = mid * (1 + hype(3, c.amp) / 100);
+    for (var k = 0; k < n; k++) {
+      var u = r(), cond = u < 0.55 ? "NM" : u < 0.8 ? "LP" : u < 0.93 ? "MP" : "HP";
+      var ch = CHANNELS[Math.floor(r() * CHANNELS.length)];
+      var price = base * COND_MULT[cond] * CH_MULT[ch] * (0.93 + r() * 0.14);
+      rows.push({ ch: ch, cond: cond, hkd: Math.round(price / 5) * 5 });
+    }
+    PAID[c.id] = rows;
+  });
+
+  /* ----- state ----- */
+  var S = { mode: "day-1", weeks: 3 };
+
+  function inputs() {
+    return {
+      card: cardById($("card").value),
+      ask: parseFloat($("ask").value) || 0,
+      cond: $("cond").value,
+      chan: $("chan").value,
+      fx: parseFloat($("fx").value) || 0,
+      fee: parseFloat($("fee").value) || 0,
+      tcg: $("srcTcg").checked,
+      ebay: $("srcEbay").checked
+    };
+  }
+  function landed(I) {
+    var v = [];
+    if (I.tcg) v.push(I.card.tcg);
+    if (I.ebay) v.push(I.card.ebay);
+    if (!v.length) return null;
+    return { low: Math.min.apply(null, v) * I.fx + I.fee, high: Math.max.apply(null, v) * I.fx + I.fee };
+  }
+  function verdict(ask, low, high, label) {
+    var lo = Math.round(low), hi = Math.round(high), rng = lo === hi ? money(lo) : money(lo) + "–" + money(hi).replace("HK$", ""), t, cls;
+    if (!ask) return { text: "Enter an asking price to compare with " + label + " (" + rng + ").", cls: "info", chip: "Waiting for a price", above: null };
+    if (ask > high) {
+      var a = Math.round((ask / high - 1) * 100), b = Math.round((ask / low - 1) * 100);
+      t = "Asking " + money(ask) + " is " + (a === b ? a : a + "–" + b) + "% above " + label + " (" + rng + ").";
+      return { text: t, cls: "warn", chip: "Above landed cost", above: true };
+    }
+    if (ask < low) {
+      var c = Math.round((1 - ask / low) * 100), d = Math.round((1 - ask / high) * 100);
+      t = "Asking " + money(ask) + " is " + (c === d ? c : c + "–" + d) + "% below " + label + " (" + rng + ").";
+      return { text: t, cls: "good", chip: "Below landed cost", above: false };
+    }
+    return { text: "Asking " + money(ask) + " is inside " + label + " (" + rng + ").", cls: "good", chip: "Within landed range", above: false };
+  }
+
+  /* ----- range bar ----- */
+  function rangeBar(I, L) {
+    var hk = I.card.hk.map(function (r) { return r[2]; });
+    var vals = [L.low, L.high, I.ask].concat(hk).filter(function (x) { return x > 0; });
+    var lo = Math.floor(Math.min.apply(null, vals) * 0.9 / 50) * 50, hi = Math.ceil(Math.max.apply(null, vals) * 1.06 / 50) * 50;
+    function p(v) { return ((v - lo) / (hi - lo)) * 100; }
+    var med = median(hk), askOk = I.ask <= L.high;
+    var labelLeft = Math.min(80, Math.max(20, (p(L.low) + p(L.high)) / 2));
+    var dots = hk.map(function (v) { return '<b class="rb-dot" style="left:' + p(v) + '%"></b>'; }).join("");
+    return '<div class="rb">' +
+      (I.ask ? '<div class="rb-ask' + (askOk ? " ok" : "") + '" style="left:' + p(I.ask) + '%"><span>Ask ' + money(I.ask) + '</span></div>' : "") +
+      '<div class="rb-track"><div class="rb-band" style="left:' + p(L.low) + '%;width:' + (p(L.high) - p(L.low)) + '%"></div>' + dots +
+      '<u class="rb-med" style="left:' + p(med) + '%"></u></div>' +
+      '<div class="rb-ends"><span>' + money(lo) + '</span><span>' + money(hi) + '</span></div>' +
+      '<div class="rb-legend"><span><i class="lg-band"></i>Landed cost ' + money(L.low) + (Math.round(L.low) === Math.round(L.high) ? "" : "–" + money(L.high)) + '</span>' +
+      '<span><i class="lg-dot"></i>Hong Kong asking prices</span><span><i class="lg-med"></i>Sample median ' + money(med) + '</span>' +
+      (I.ask ? '<span><i class="lg-ask"></i>Your ask</span>' : "") + '</div></div>';
+  }
+
+  /* ----- Day 1 render ----- */
+  function renderDay1() {
+    var I = inputs(), L = landed(I);
+    $("cardName").textContent = I.card.name + " (" + I.card.set + ")";
+    // US table
+    var rows = [["TCGplayer market price", I.card.tcg, I.tcg], ["eBay sold price", I.card.ebay, I.ebay]];
+    $("usTable").innerHTML = '<thead><tr><th>Source</th><th class="r">US$</th><th class="r">× FX</th><th class="r">+ fee</th><th class="r">Landed</th><th>Updated</th></tr></thead><tbody>' +
+      rows.map(function (r) {
+        var conv = r[1] * I.fx;
+        return '<tr class="' + (r[2] ? "" : "off") + '"><td>' + r[0] + (r[2] ? "" : " (off)") + '</td><td class="r num">' + r[1] + '</td><td class="r num">' + Math.round(conv).toLocaleString("en-US") + '</td><td class="r num">' + I.fee + '</td><td class="r num"><b>' + money(conv + I.fee) + '</b></td><td class="muted small">' + SAMPLE_DATE + '</td></tr>';
+      }).join("") + '</tbody>';
+    // HK table
+    var chanNote = "";
+    var anyMatch = I.card.hk.some(function (r) { return r[1] === I.chan; });
+    if (I.chan === "Telegram/IG" || I.chan === "Livestream") chanNote = "No sample rows for this channel. Private channels are not visible on Day 1, so compare with shop and Carousell asks.";
+    else chanNote = "Asking prices collected by hand, " + SAMPLE_DATE + ". Not what buyers paid.";
+    $("hkNote").textContent = chanNote;
+    $("hkTable").innerHTML = '<thead><tr><th>Seller</th><th>Channel</th><th class="r">Asking</th><th class="r">vs landed mid</th></tr></thead><tbody>' +
+      I.card.hk.map(function (r) {
+        var mid = L ? (L.low + L.high) / 2 : null;
+        var diff = mid ? Math.round((r[2] / mid - 1) * 100) : null;
+        return '<tr class="' + (anyMatch && r[1] === I.chan ? "hl" : "") + '"><td>' + esc(r[0]) + '</td><td>' + esc(r[1]) + '</td><td class="r num">' + money(r[2]) + '</td><td class="r num">' + (diff === null ? "–" : (diff > 0 ? "+" : "") + diff + "%") + '</td></tr>';
+      }).join("") + '</tbody>';
+    // verdict
+    if (!L) {
+      $("vLine").textContent = "Tick at least one US reference price to calculate a landed cost.";
+      $("vChip").className = "chip info"; $("vChip").textContent = "No source selected";
+      $("rangeBar").innerHTML = "";
+      return null;
+    }
+    var V = verdict(I.ask, L.low, L.high, "landed cost");
+    var hkMed = median(I.card.hk.map(function (r) { return r[2]; }));
+    var extra = "";
+    if (I.ask) {
+      var m = Math.round((I.ask / hkMed - 1) * 100);
+      extra = " Sample median is " + money(hkMed) + ", so your ask is " + (m === 0 ? "level with it" : Math.abs(m) + "% " + (m > 0 ? "above" : "below") + " it") + ".";
+    }
+    $("vLine").textContent = V.text + extra;
+    $("vChip").className = "chip " + V.cls; $("vChip").textContent = V.chip;
+    if (I.cond !== "NM" && S.mode === "day-1") {
+      $("vChip").className = "chip warn";
+      $("vChip").textContent = V.chip + " · " + COND_NAME[I.cond] + " not adjusted";
+    }
+    $("rangeBar").innerHTML = rangeBar(I, L);
+    return { I: I, L: L };
+  }
+
+  /* ----- Later render ----- */
+  function renderLater(ctx) {
+    var total = 0;
+    CARDS.forEach(function (c) { total += PAID[c.id].length; });
+    $("totalN").textContent = total.toLocaleString("en-US");
+    if (!ctx) { $("paidPanel").innerHTML = $("condPanel").innerHTML = $("hypePanel").innerHTML = '<p class="muted">Tick a US reference price above to see these.</p>'; return; }
+    var I = ctx.I, L = ctx.L, rows = PAID[I.card.id], mid = (L.low + L.high) / 2;
+
+    // Panel 1: paid prices
+    var all = rows.map(function (r) { return r.hkd; }), n = all.length;
+    var nmRows = rows.filter(function (r) { return r.cond === "NM"; }).map(function (r) { return r.hkd; });
+    var medAll = median(all);
+    var conf = n < 5 ? ["bad", "Low confidence"] : n < 15 ? ["warn", "Medium confidence"] : ["good", "High confidence"];
+    var maxN = 1;
+    var byCh = CHANNELS.map(function (ch) {
+      var v = rows.filter(function (r) { return r.ch === ch; }).map(function (r) { return r.hkd; });
+      maxN = Math.max(maxN, v.length);
+      return { ch: ch, n: v.length, med: median(v) };
+    });
+    $("paidPanel").innerHTML =
+      '<span class="label">Local paid prices · ' + esc(I.card.name) + '</span>' +
+      '<div><div class="big">' + money(medAll) + '</div><div class="muted small">median paid, all conditions, n = ' + n + '</div></div>' +
+      '<span class="chip ' + conf[0] + '">' + conf[1] + '</span>' +
+      '<p class="small muted" style="margin:0">Compared with landed cost midpoint ' + money(mid) + ': paid prices run ' + (Math.round((medAll / mid - 1) * 100) >= 0 ? "+" : "") + Math.round((medAll / mid - 1) * 100) + '%. Confidence rule is illustrative: under 5 rows low, 5–14 medium, 15 or more high.</p>' +
+      '<div class="bars">' + byCh.map(function (b) {
+        return '<div class="bar"><span>' + esc(b.ch) + '</span><div class="track"><div class="fill" style="width:' + (b.n / maxN * 100) + '%"></div></div><span class="num small">' + (b.med ? money(b.med) : "–") + ' · ' + b.n + '</span></div>';
+      }).join("") + '</div>' +
+      '<div style="border-top:1px solid var(--line);padding-top:12px"><h3 style="margin-bottom:8px">Log a price you paid</h3>' +
+      '<div class="logform"><div class="field" style="margin:0"><label for="logCh">Channel</label><select id="logCh">' + CHANNELS.map(function (c) { return '<option>' + c + '</option>'; }).join("") + '</select></div>' +
+      '<div class="field" style="margin:0"><label for="logCond">Condition</label><select id="logCond">' + CONDS.map(function (c) { return '<option value="' + c + '">' + COND_NAME[c] + '</option>'; }).join("") + '</select></div>' +
+      '<div class="field" style="margin:0"><label for="logPrice">Paid (HK$)</label><input type="number" id="logPrice" min="1" step="5" value="' + Math.round(mid * 1.15 / 5) * 5 + '"></div></div>' +
+      '<div style="display:flex;gap:12px;align-items:center;margin-top:10px;flex-wrap:wrap"><button type="button" class="btn" id="logBtn">Add to local prices</button><p class="status" id="logStatus" role="status"></p></div></div>';
+    $("logBtn").addEventListener("click", function () {
+      var price = parseFloat($("logPrice").value);
+      if (!(price > 0)) { $("logStatus").textContent = "Enter the price you paid in HK$."; $("logStatus").style.color = "var(--bad)"; return; }
+      PAID[I.card.id].push({ ch: $("logCh").value, cond: $("logCond").value, hkd: Math.round(price) });
+      var keepCh = $("logCh").value, keepCond = $("logCond").value;
+      renderAll();
+      $("logCh").value = keepCh; $("logCond").value = keepCond;
+      var nn = PAID[I.card.id].length, mm = median(PAID[I.card.id].map(function (r) { return r.hkd; }));
+      $("logStatus").style.color = "var(--good)";
+      $("logStatus").textContent = "Added. Median paid is now " + money(mm) + " from " + nn + " prices.";
+    });
+
+    // Panel 2: condition adjustment
+    var nmMed = median(nmRows);
+    var cr = CONDS.map(function (c) {
+      var v = rows.filter(function (r) { return r.cond === c; }).map(function (r) { return r.hkd; });
+      var m = median(v), f = (m && nmMed && v.length >= 2) ? m / nmMed : null;
+      return { c: c, n: v.length, med: m, f: f };
+    });
+    var sel = cr.filter(function (x) { return x.c === I.cond; })[0], condHtml;
+    if (sel.f) {
+      var AV = verdict(I.ask, L.low * sel.f, L.high * sel.f, "the condition-adjusted estimate");
+      condHtml = '<div><div class="big">' + money(L.low * sel.f) + (Math.round(L.low) === Math.round(L.high) ? "" : "–" + money(L.high * sel.f).replace("HK$", "")) + '</div><div class="muted small">expected landed-equivalent for a ' + COND_NAME[I.cond].toLowerCase() + ' copy (× ' + sel.f.toFixed(2) + ')</div></div>' +
+        '<span class="chip ' + AV.cls + '">' + AV.chip + '</span><p class="small" style="margin:0">' + esc(AV.text) + '</p>';
+    } else condHtml = '<p class="muted">Not enough logged prices for ' + COND_NAME[I.cond].toLowerCase() + ' copies yet. Add some to unlock the adjustment.</p>';
+    $("condPanel").innerHTML = '<span class="label">Condition-adjusted price · ' + esc(COND_NAME[I.cond]) + '</span>' + condHtml +
+      '<div class="tw"><table><thead><tr><th>Condition</th><th class="r">n</th><th class="r">Median paid</th><th class="r">Factor</th></tr></thead><tbody>' +
+      cr.map(function (x) { return '<tr class="' + (x.c === I.cond ? "hl" : "") + '"><td>' + COND_NAME[x.c] + '</td><td class="r num">' + x.n + '</td><td class="r num">' + (x.med ? money(x.med) : "–") + '</td><td class="r num">' + (x.c === "NM" ? "1.00" : x.f ? x.f.toFixed(2) : "–") + '</td></tr>'; }).join("") +
+      '</tbody></table></div><p class="small muted" style="margin:0">Factors are learned from the logged rows: median paid for a condition divided by median paid for Near Mint.</p>';
+
+    // Panel 3: hype curve (slider lives outside the redrawn chart so dragging works)
+    $("hypePanel").innerHTML = '<span class="label">Hype-spike tracker · ' + esc(I.card.name) + '</span>' +
+      '<p style="margin:0" id="hypeLine"></p><div id="hypeChart"></div>' +
+      '<div class="field" style="margin:0"><label for="wk">Weeks since this set was released: <b class="num" id="wkOut"></b></label><input type="range" id="wk" min="0" max="12" step="1" value="' + S.weeks + '"></div>' +
+      '<p class="small muted" style="margin:0" id="hypeNote"></p>';
+    function drawHype() {
+      var W = 420, H = 220, ml = 40, mr = 14, mt = 18, mb = 34, amp = I.card.amp;
+      var askPrem = I.ask ? (I.ask / mid - 1) * 100 : null;
+      var pts = [], w;
+      for (w = 0; w <= 12; w++) pts.push([w, hype(w, amp)]);
+      var ymax = Math.ceil(Math.max(pts[0][1], askPrem || 0) / 20) * 20, ymin = askPrem !== null && askPrem < 0 ? Math.floor(askPrem / 20) * 20 : 0;
+      function X(v) { return ml + (v / 12) * (W - ml - mr); }
+      function Y(v) { return mt + (1 - (v - ymin) / (ymax - ymin)) * (H - mt - mb); }
+      var line = pts.map(function (p, i) { return (i ? "L" : "M") + X(p[0]).toFixed(1) + " " + Y(p[1]).toFixed(1); }).join(" ");
+      var area = line + " L" + X(12).toFixed(1) + " " + Y(0).toFixed(1) + " L" + X(0).toFixed(1) + " " + Y(0).toFixed(1) + " Z";
+      var grid = "", yy;
+      for (yy = ymin; yy <= ymax; yy += 20) grid += '<line class="grid-l" x1="' + ml + '" x2="' + (W - mr) + '" y1="' + Y(yy).toFixed(1) + '" y2="' + Y(yy).toFixed(1) + '"/><text x="' + (ml - 6) + '" y="' + (Y(yy) + 4).toFixed(1) + '" text-anchor="end">' + (yy > 0 ? "+" : "") + yy + '%</text>';
+      var xl = "";
+      [0, 3, 6, 9, 12].forEach(function (t) { xl += '<text x="' + X(t).toFixed(1) + '" y="' + (H - 14) + '" text-anchor="middle">' + t + '</text>'; });
+      var nowP = hype(S.weeks, amp), settled = hype(12, amp);
+      var nowX = X(S.weeks), anchor = S.weeks > 8 ? "end" : "start", dx = S.weeks > 8 ? -8 : 8;
+      var askSvg = askPrem === null ? "" : '<line class="c-ask" x1="' + ml + '" x2="' + (W - mr) + '" y1="' + Y(askPrem).toFixed(1) + '" y2="' + Y(askPrem).toFixed(1) + '"/><text class="t-ask" x="' + (W - mr) + '" y="' + (Y(askPrem) - 6).toFixed(1) + '" text-anchor="end">Your ask ' + (askPrem > 0 ? "+" : "") + Math.round(askPrem) + '%</text>';
+      $("hypeChart").innerHTML = '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Premium over landed cost by weeks since release">' + grid + xl +
+        '<text x="' + ((ml + W - mr) / 2) + '" y="' + (H - 1) + '" text-anchor="middle">weeks since release</text>' +
+        '<path class="c-area" d="' + area + '"/><path class="c-line" d="' + line + '"/>' + askSvg +
+        '<line class="c-now" x1="' + nowX.toFixed(1) + '" x2="' + nowX.toFixed(1) + '" y1="' + mt + '" y2="' + Y(0).toFixed(1) + '"/>' +
+        '<circle class="c-dot" cx="' + nowX.toFixed(1) + '" cy="' + Y(nowP).toFixed(1) + '" r="5"/>' +
+        '<text class="t-now" x="' + (nowX + dx).toFixed(1) + '" y="' + (Y(nowP) - 10).toFixed(1) + '" text-anchor="' + anchor + '">+' + Math.round(nowP) + '%</text></svg>';
+      $("wkOut").textContent = S.weeks;
+      $("hypeLine").textContent = "At week " + S.weeks + " this card trades about " + Math.round(nowP) + "% over landed cost" + (askPrem === null ? "." : ". Your ask is " + (askPrem >= 0 ? "+" : "") + Math.round(askPrem) + "%" + (askPrem > nowP + 3 ? ", above the usual premium for this week." : askPrem < nowP - 3 ? ", below the usual premium for this week." : ", about the usual premium for this week."));
+      $("hypeNote").textContent = "The curve is illustrative: premium of the Hong Kong market over landed cost, averaged across earlier releases in the sample, scaled for this card. By week 12 it settles near +" + Math.round(settled) + "%, which is typical shop margin.";
+    }
+    drawHype();
+    $("wk").addEventListener("input", function () { S.weeks = parseInt(this.value, 10); drawHype(); });
+  }
+
+  function renderAll() {
+    var ctx = renderDay1();
+    var later = S.mode === "later";
+    $("later").hidden = !later;
+    $("notShown").hidden = later;
+    $("btnDay1").setAttribute("aria-pressed", String(!later));
+    $("btnLater").setAttribute("aria-pressed", String(later));
+    $("tagline").textContent = later
+      ? "Adds what people in Hong Kong actually paid, so the check gets sharper with use."
+      : "Pokémon card price check. Works on Day 1 with no other users.";
+    if (later) renderLater(ctx);
+  }
+
+  function setMode(m) {
+    S.mode = m;
+    try { if (location.hash !== "#" + m) location.hash = m; } catch (e) {}
+    renderAll();
+  }
+  function fromHash() {
+    var h = (location.hash || "").replace("#", "");
+    S.mode = h === "later" ? "later" : "day-1";
+    renderAll();
+  }
+
+  /* ----- init ----- */
+  $("card").innerHTML = CARDS.map(function (c) { return '<option value="' + c.id + '">' + esc(c.name) + ' · ' + esc(c.set) + '</option>'; }).join("");
+  ["card", "ask", "cond", "chan", "fx", "fee", "srcTcg", "srcEbay"].forEach(function (id) {
+    $(id).addEventListener("input", renderAll);
+    $(id).addEventListener("change", renderAll);
+  });
+  $("btnDay1").addEventListener("click", function () { setMode("day-1"); });
+  $("btnLater").addEventListener("click", function () { setMode("later"); });
+  window.addEventListener("hashchange", fromHash);
+  fromHash();
+})();
+</script>
+
+</body>
+</html>
