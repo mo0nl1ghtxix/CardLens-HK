@@ -218,6 +218,8 @@ footer.note { font-size: 12px; color: var(--muted); }
         <div class="checks">
           <label><input type="checkbox" id="srcTcg" checked> TCGplayer market price</label>
           <label><input type="checkbox" id="srcEbay" checked> eBay sold price</label>
+          <label><input type="checkbox" id="srcScry" checked> Scrydex price</label>
+          <label><input type="checkbox" id="srcPpt" checked> Pokémon Price Tracker price</label>
         </div>
         <p class="hint">Landed cost = US$ price × exchange rate + shipping and forwarding. FX and fee are your assumptions, edit them.</p>
       </div>
@@ -269,7 +271,7 @@ footer.note { font-size: 12px; color: var(--muted); }
     </div>
   </section>
 
-  <footer class="note">Built for ISOM2010. Day 1 inputs: US reference prices (free APIs), a hand-collected Hong Kong sample, your own FX and fee assumptions. Later inputs: prices paid, logged by users.</footer>
+  <footer class="note">Built for ISOM2010. Day 1 inputs: US reference prices (TCGplayer, eBay, Scrydex, Pokémon Price Tracker), a hand-collected Hong Kong sample, your own FX and fee assumptions. Later inputs: prices paid, logged by users.</footer>
 </div>
 
 <script>
@@ -278,21 +280,21 @@ footer.note { font-size: 12px; color: var(--muted); }
 
   /* ------------------------------------------------------------------ *
    * SAMPLE DATA. Replace with collected data before using real numbers.
-   * us prices: US$, Near Mint raw. hk: asking prices collected by hand.
+   * us prices (tcg, ebay, scry, ppt): US$, Near Mint raw, illustrative values only, not quotes from those services. hk: asking prices collected by hand.
    * amp scales the illustrative post-release hype curve per card.
    * ------------------------------------------------------------------ */
   var CARDS = [
-    { id: "venusaur", name: "Venusaur ex SAR", set: "Pokémon Card 151", tcg: 40, ebay: 46, amp: 0.9,
+    { id: "venusaur", name: "Venusaur ex SAR", set: "Pokémon Card 151", tcg: 40, ebay: 46, scry: 42, ppt: 44, amp: 0.9,
       hk: [["Shop A (Mong Kok)", "Shop", 420], ["Shop B (Sham Shui Po)", "Shop", 450], ["Carousell listing 1", "Carousell", 380], ["Carousell listing 2", "Carousell", 399]] },
-    { id: "blastoise", name: "Blastoise ex SAR", set: "Pokémon Card 151", tcg: 48, ebay: 55, amp: 0.9,
+    { id: "blastoise", name: "Blastoise ex SAR", set: "Pokémon Card 151", tcg: 48, ebay: 55, scry: 50, ppt: 53, amp: 0.9,
       hk: [["Shop A (Mong Kok)", "Shop", 480], ["Shop B (Sham Shui Po)", "Shop", 520], ["Carousell listing 1", "Carousell", 450], ["Carousell listing 2", "Carousell", 470]] },
-    { id: "mew", name: "Mew ex SAR", set: "Pokémon Card 151", tcg: 55, ebay: 62, amp: 1.0,
+    { id: "mew", name: "Mew ex SAR", set: "Pokémon Card 151", tcg: 55, ebay: 62, scry: 57, ppt: 60, amp: 1.0,
       hk: [["Shop A (Mong Kok)", "Shop", 550], ["Shop B (Sham Shui Po)", "Shop", 590], ["Carousell listing 1", "Carousell", 500], ["Carousell listing 2", "Carousell", 520]] },
-    { id: "erika", name: "Erika's Invitation SAR", set: "Pokémon Card 151", tcg: 85, ebay: 96, amp: 0.8,
+    { id: "erika", name: "Erika's Invitation SAR", set: "Pokémon Card 151", tcg: 85, ebay: 96, scry: 88, ppt: 93, amp: 0.8,
       hk: [["Shop A (Mong Kok)", "Shop", 830], ["Shop B (Sham Shui Po)", "Shop", 880], ["Carousell listing 1", "Carousell", 760], ["Carousell listing 2", "Carousell", 790]] },
-    { id: "pikachu", name: "Pikachu ex SAR", set: "Terastal Festival ex", tcg: 95, ebay: 108, amp: 1.1,
+    { id: "pikachu", name: "Pikachu ex SAR", set: "Terastal Festival ex", tcg: 95, ebay: 108, scry: 98, ppt: 105, amp: 1.1,
       hk: [["Shop A (Mong Kok)", "Shop", 920], ["Shop B (Sham Shui Po)", "Shop", 980], ["Carousell listing 1", "Carousell", 850], ["Carousell listing 2", "Carousell", 880]] },
-    { id: "charizard", name: "Charizard ex SAR", set: "Terastal Festival ex", tcg: 180, ebay: 205, amp: 1.3,
+    { id: "charizard", name: "Charizard ex SAR", set: "Terastal Festival ex", tcg: 180, ebay: 205, scry: 188, ppt: 198, amp: 1.3,
       hk: [["Shop A (Mong Kok)", "Shop", 1680], ["Shop B (Sham Shui Po)", "Shop", 1750], ["Carousell listing 1", "Carousell", 1520], ["Carousell listing 2", "Carousell", 1580]] }
   ];
   var SAMPLE_DATE = "Nov 2026, sample";
@@ -353,13 +355,17 @@ footer.note { font-size: 12px; color: var(--muted); }
       fx: parseFloat($("fx").value) || 0,
       fee: parseFloat($("fee").value) || 0,
       tcg: $("srcTcg").checked,
-      ebay: $("srcEbay").checked
+      ebay: $("srcEbay").checked,
+      scry: $("srcScry").checked,
+      ppt: $("srcPpt").checked
     };
   }
   function landed(I) {
     var v = [];
     if (I.tcg) v.push(I.card.tcg);
     if (I.ebay) v.push(I.card.ebay);
+    if (I.scry) v.push(I.card.scry);
+    if (I.ppt) v.push(I.card.ppt);
     if (!v.length) return null;
     return { low: Math.min.apply(null, v) * I.fx + I.fee, high: Math.max.apply(null, v) * I.fx + I.fee };
   }
@@ -403,7 +409,7 @@ footer.note { font-size: 12px; color: var(--muted); }
     var I = inputs(), L = landed(I);
     $("cardName").textContent = I.card.name + " (" + I.card.set + ")";
     // US table
-    var rows = [["TCGplayer market price", I.card.tcg, I.tcg], ["eBay sold price", I.card.ebay, I.ebay]];
+    var rows = [["TCGplayer market price", I.card.tcg, I.tcg], ["eBay sold price", I.card.ebay, I.ebay], ["Scrydex price", I.card.scry, I.scry], ["Pokémon Price Tracker price", I.card.ppt, I.ppt]];
     $("usTable").innerHTML = '<thead><tr><th>Source</th><th class="r">US$</th><th class="r">× FX</th><th class="r">+ fee</th><th class="r">Landed</th><th>Updated</th></tr></thead><tbody>' +
       rows.map(function (r) {
         var conv = r[1] * I.fx;
