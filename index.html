@@ -153,6 +153,37 @@ svg.chart text.t-now { fill: var(--ink); }
 input[type="range"] { width: 100%; accent-color: var(--accent); }
 footer.note { font-size: 12px; color: var(--muted); }
 @media (prefers-reduced-motion: no-preference) { .rb-ask, .rb-band { transition: left .2s, width .2s; } }
+
+/* Collection Tracker mode */
+[hidden] { display: none !important; }
+svg.chart.wide { max-width: none; }
+svg.chart text.t-acc { fill: var(--accent); font-weight: 600; font-size: 12px; }
+.trk-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 12px 16px; margin: 6px 0 12px; }
+.trk-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.trk-narr { margin: 0 0 8px; font-size: 14px; }
+.trk-chart { position: relative; margin: 4px 0 6px; }
+.trk-tip { position: absolute; top: 4px; right: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 5px 9px; font-size: 12px; pointer-events: none; opacity: 0; transition: opacity .12s; }
+.trk-tip.on { opacity: 1; }
+.trk-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; border-top: 1px solid var(--line); margin-top: 12px; padding-top: 14px; }
+@media (max-width: 620px) { .trk-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.trk-metrics .v { font-family: var(--f-mono); font-size: 15px; font-weight: 500; }
+.trk-metrics .v.pos { color: var(--good); }
+.trk-metrics .v.neg { color: var(--bad); }
+.trk-form { display: grid; grid-template-columns: 2fr 1fr 1.2fr 1fr; gap: 12px; align-items: end; margin-bottom: 14px; }
+.trk-form .field { margin-bottom: 0; }
+@media (max-width: 680px) { .trk-form { grid-template-columns: 1fr 1fr; } }
+.trk-bar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
+#tkTable tbody tr { cursor: pointer; }
+#tkTable tbody tr:hover td { background: var(--bg); }
+#tkTable tbody tr.hl td { background: var(--accent-soft); }
+#tkTable td .sub { display: block; font-size: 12px; color: var(--muted); }
+#tkTable td { vertical-align: middle; }
+.tag { display: inline-block; font-family: var(--f-mono); font-size: 11px; font-weight: 500; padding: 2px 7px; border-radius: 5px; background: var(--bg); color: var(--muted); border: 1px solid var(--line); margin-right: 4px; }
+.tag.own { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+.btn-x { font: inherit; font-size: 12px; color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; cursor: pointer; }
+.btn-x:hover, .btn-x:focus-visible { color: var(--bad); border-color: var(--bad); outline: none; }
+.callout { margin-top: 14px; background: var(--bg); border: 1px solid var(--line); border-radius: 9px; padding: 12px 14px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+.callout strong { color: var(--ink); }
 </style>
 
 </head>
@@ -166,12 +197,13 @@ footer.note { font-size: 12px; color: var(--muted); }
     <div class="seg" role="group" aria-label="Product state">
       <button type="button" id="btnDay1" aria-pressed="true">Day 1 · just you</button>
       <button type="button" id="btnLater" aria-pressed="false">Later · many users</button>
+      <button type="button" id="btnTracker" aria-pressed="false">Later · Collection Tracker</button>
     </div>
   </header>
 
-  <div class="banner">Demo with sample data. Prices below are illustrative and are not live market prices. The Hong Kong shop and Carousell rows stand in for a hand-collected sample.</div>
+  <div class="banner" id="banner">Demo with sample data. Prices below are illustrative and are not live market prices. The Hong Kong shop and Carousell rows stand in for a hand-collected sample.</div>
 
-  <div class="grid">
+  <div class="grid" id="dayGrid">
     <section class="panel" aria-labelledby="h-in">
       <h2 id="h-in" style="margin-bottom:14px">Check a card</h2>
       <div class="field">
@@ -271,7 +303,87 @@ footer.note { font-size: 12px; color: var(--muted); }
     </div>
   </section>
 
-  <footer class="note">Built for ISOM2010. Day 1 inputs: US reference prices (TCGplayer, eBay, Scrydex, Pokémon Price Tracker), a hand-collected Hong Kong sample, your own FX and fee assumptions. Later inputs: prices paid, logged by users.</footer>
+  <section id="tracker" hidden>
+    <div class="stack">
+      <section class="panel" aria-labelledby="h-trk">
+        <span class="label" id="h-trk">Collection portfolio · total value</span>
+        <div class="trk-top">
+          <div>
+            <div class="big" id="tkTotal"></div>
+            <div class="muted small" id="tkSub"></div>
+          </div>
+          <div class="seg" role="group" aria-label="Chart timeframe" id="tkTf">
+            <button type="button" data-tf="1M" aria-pressed="false">1M</button>
+            <button type="button" data-tf="3M" aria-pressed="false">3M</button>
+            <button type="button" data-tf="6M" aria-pressed="false">6M</button>
+            <button type="button" data-tf="ALL" aria-pressed="true">ALL</button>
+          </div>
+        </div>
+        <div class="trk-pills"><span class="chip good" id="tkGain"></span><span class="chip warn" id="tkAlerts"></span></div>
+        <p class="trk-narr" id="tkNarr"></p>
+        <div class="trk-chart">
+          <div class="trk-tip" id="tkTip" role="status"></div>
+          <svg class="chart wide" id="tkChart" viewBox="0 0 700 210" role="img" aria-label="Portfolio value over time against cost basis"></svg>
+        </div>
+        <p class="hint" id="tkFoot"></p>
+        <div class="trk-metrics">
+          <div><div class="label">Cost basis</div><div class="v" id="mCost"></div><div class="hint">Logged paid total</div></div>
+          <div><div class="label">Unrealized gain</div><div class="v" id="mGain"></div><div class="hint" id="mGainPct"></div></div>
+          <div><div class="label">Top gainer</div><div class="v pos" id="mTop"></div><div class="hint" id="mTopName"></div></div>
+          <div><div class="label">Watchlist</div><div class="v" id="mWatch"></div><div class="hint" id="mWatchAl"></div></div>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="h-add">
+        <h2 id="h-add" style="margin-bottom:2px">Log a card to your collection or watchlist</h2>
+        <p class="muted small" style="margin:0 0 14px">Record cards you own, or watch cards you want, to follow what they are worth in Hong Kong.</p>
+        <form id="tkForm">
+          <div class="trk-form">
+            <div class="field"><label for="tkCard">Card (Japanese version)</label>
+              <select id="tkCard">
+                <option value="Venusaur ex SAR|Pokémon Card 151|450">Venusaur ex SAR · Pokémon Card 151</option>
+                <option value="Charizard ex SAR|Pokémon Card 151|1480">Charizard ex SAR · Pokémon Card 151</option>
+                <option value="Blastoise ex SAR|Pokémon Card 151|410">Blastoise ex SAR · Pokémon Card 151</option>
+                <option value="Mew ex SAR|Pokémon Card 151|560">Mew ex SAR · Pokémon Card 151</option>
+                <option value="Pikachu AR|Pokémon Card 151|145">Pikachu AR · Pokémon Card 151</option>
+                <option value="Gardevoir ex SAR|Shiny Treasure ex|680">Gardevoir ex SAR · Shiny Treasure ex</option>
+              </select></div>
+            <div class="field"><label for="tkList">List</label>
+              <select id="tkList"><option value="Owned">Owned</option><option value="Watchlist">Watchlist</option></select></div>
+            <div class="field"><label for="tkCond">Condition / grade</label>
+              <select id="tkCond">
+                <option value="Near Mint|1.00">Near Mint (×1.00)</option>
+                <option value="Light Play|0.90">Light Play (×0.90)</option>
+                <option value="Moderate Play|0.67">Moderate Play (×0.67)</option>
+                <option value="Graded PSA 10|1.35">Graded PSA 10 (×1.35)</option>
+              </select></div>
+            <div class="field"><label for="tkPaid">Paid / target (HK$)</label>
+              <input type="number" id="tkPaid" value="390" min="10" step="5" required></div>
+          </div>
+          <button type="submit" class="btn">Add to collection</button>
+        </form>
+      </section>
+
+      <section class="panel" aria-labelledby="h-tbl">
+        <span class="label" id="h-tbl">My collection and watchlist · condition-adjusted signals</span>
+        <div class="trk-bar" style="margin-top:8px">
+          <div class="seg" role="group" aria-label="Filter" id="tkFilter">
+            <button type="button" data-f="all" aria-pressed="true"></button>
+            <button type="button" data-f="Owned" aria-pressed="false"></button>
+            <button type="button" data-f="Watchlist" aria-pressed="false"></button>
+            <button type="button" data-f="alerts" aria-pressed="false"></button>
+          </div>
+        </div>
+        <div class="tw"><table id="tkTable"></table></div>
+        <div class="callout">
+          <div><strong id="coTitle"></strong> · <span id="coText"></span></div>
+          <span class="chip info" id="coConf"></span>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <footer class="note">Built for ISOM2010. Day 1 inputs: US reference prices (TCGplayer, eBay, Scrydex, Pokémon Price Tracker), a hand-collected Hong Kong sample, your own FX and fee assumptions. Later inputs: prices paid, logged by users. Collection Tracker inputs: the cards you log and what you paid, valued against condition-adjusted Hong Kong paid prices (sample data in this demo).</footer>
 </div>
 
 <script>
@@ -399,7 +511,7 @@ footer.note { font-size: 12px; color: var(--muted); }
       '<div class="rb-track"><div class="rb-band" style="left:' + p(L.low) + '%;width:' + (p(L.high) - p(L.low)) + '%"></div>' + dots +
       '<u class="rb-med" style="left:' + p(med) + '%"></u></div>' +
       '<div class="rb-ends"><span>' + money(lo) + '</span><span>' + money(hi) + '</span></div>' +
-      '<div class="rb-legend"><span><i class="lg-band"></i>Landed cost ' + money(L.low) + (Math.round(L.low) === Math.round(L.high) ? "" : "–" + money(L.high)) + '</span>' +
+      '<div class="rb-legend"><span><i class="lg-band"></i>Landed cost ' + money(L.low) + (Math.round(L.low) === Math.round(L.high) ? "" : "–" + money(L.high).replace("HK$", "")) + '</span>' +
       '<span><i class="lg-dot"></i>Hong Kong asking prices</span><span><i class="lg-med"></i>Sample median ' + money(med) + '</span>' +
       (I.ask ? '<span><i class="lg-ask"></i>Your ask</span>' : "") + '</div></div>';
   }
@@ -549,17 +661,186 @@ footer.note { font-size: 12px; color: var(--muted); }
     $("wk").addEventListener("input", function () { S.weeks = parseInt(this.value, 10); drawHype(); });
   }
 
+  /* ------------------------------------------------------------------ *
+   * COLLECTION TRACKER (Later). SAMPLE DATA, calibrated so 8 owned cards
+   * are worth HK$4,820 against a logged cost of HK$4,080 (+HK$740, +18.1%).
+   * est = condition-adjusted estimate from Hong Kong paid prices; the condition
+   * multipliers, sample counts (n) and the value history are illustrative.
+   * ------------------------------------------------------------------ */
+  var DAY_BANNER = $("banner").textContent;
+  var TK_BANNER = "Demo with sample data. The collection, the Hong Kong paid prices behind each estimate, the sample counts and the condition multipliers are illustrative, not logged data.";
+  var TK_CARDS = [
+    { id: 1, name: "Charizard ex SAR", set: "Pokémon Card 151", status: "Owned", cond: "Graded PSA 10", paid: 1450, est: 1920, alert: true, cls: "good", sig: "▲ Spike +32%", n: 19,
+      note: "Estimated from 19 HK PSA 10 sales. Rising +32.4% over 90 days; strong hold or profit-taking zone." },
+    { id: 2, name: "Venusaur ex SAR", set: "Pokémon Card 151", status: "Owned", cond: "Near Mint", paid: 380, est: 450, alert: false, cls: "good", sig: "▲ Rising +18%", n: 25,
+      note: "Median HK Near Mint paid price is HK$450 across 25 logged rows (+18.4% above your HK$380 purchase price)." },
+    { id: 3, name: "Mew ex SAR", set: "Pokémon Card 151", status: "Owned", cond: "Near Mint", paid: 620, est: 560, alert: true, cls: "bad", sig: "▼ Dropping -10%", n: 16,
+      note: "Recent Carousell and local shop paid prices cooled from HK$620 to HK$560 (-9.7%). Alert triggered for downward trend." },
+    { id: 4, name: "Blastoise ex SAR", set: "Pokémon Card 151", status: "Owned", cond: "Light Play", paid: 310, est: 345, alert: false, cls: "good", sig: "▲ Rising +11%", n: 14,
+      note: "Light Play factor (×0.90) applied to the Near Mint median of HK$383 gives HK$345 (+11.3% gain)." },
+    { id: 5, name: "Gardevoir ex SAR", set: "Shiny Treasure ex", status: "Owned", cond: "Near Mint", paid: 480, est: 575, alert: false, cls: "good", sig: "▲ Rising +20%", n: 18,
+      note: "Steady collector demand across Mong Kok shops lifted the Near Mint median paid price to HK$575 (+19.8%)." },
+    { id: 6, name: "Zapdos ex SAR", set: "Pokémon Card 151", status: "Owned", cond: "Near Mint", paid: 340, est: 390, alert: false, cls: "good", sig: "▲ Rising +15%", n: 12,
+      note: "Consistent HK transactions around HK$390 (+14.7% over your logged cost)." },
+    { id: 7, name: "Alakazam ex SAR", set: "Pokémon Card 151", status: "Owned", cond: "Near Mint", paid: 290, est: 320, alert: false, cls: "good", sig: "▲ Steady +10%", n: 11,
+      note: "Modest +10.3% appreciation across 11 logged Hong Kong transactions." },
+    { id: 8, name: "Pikachu AR", set: "Pokémon Card 151", status: "Owned", cond: "Near Mint", paid: 210, est: 260, alert: false, cls: "good", sig: "▲ Rising +24%", n: 22,
+      note: "High-liquidity card in Hong Kong; the Near Mint median paid price rose +23.8% to HK$260." },
+    { id: 9, name: "Umbreon ex SAR", set: "Terastal Festival ex", status: "Watchlist", cond: "Near Mint", paid: 2100, est: 2480, alert: true, cls: "warn", sig: "▲ Surge alert", n: 21,
+      note: "Watchlist alert: the market price is +18.1% above your HK$2,100 target. Consider waiting for post-hype cooling." },
+    { id: 10, name: "Pikachu ex SAR", set: "Super Electric Breaker", status: "Watchlist", cond: "Near Mint", paid: 950, est: 880, alert: false, cls: "warn", sig: "★ Buy zone", n: 15,
+      note: "Watchlist opportunity: the local paid median dipped -7.4% to HK$880, now below your HK$950 target." },
+    { id: 11, name: "Iono SAR", set: "Clay Burst", status: "Watchlist", cond: "Light Play", paid: 780, est: 795, alert: false, cls: "warn", sig: "● Near target", n: 13,
+      note: "Trading within 1.9% of your HK$780 target for Light Play condition." }
+  ];
+  /* Illustrative value history: ratio of today's total value. Not real price history. */
+  var TK_SERIES = {
+    "1M": { l: ["W1", "W2", "W3", "W4"], r: [0.93, 0.96, 0.98, 1.0], d: "past 30 days" },
+    "3M": { l: ["Aug", "Sep", "Oct", "Nov"], r: [0.85, 0.90, 0.95, 1.0], d: "past 3 months" },
+    "6M": { l: ["Jun", "Jul", "Aug", "Sep", "Oct", "Nov"], r: [0.76, 0.80, 0.85, 0.90, 0.95, 1.0], d: "past 6 months" },
+    "ALL": { l: ["Q1", "Q2", "Q3", "Q4"], r: [0.70, 0.81, 0.91, 1.0], d: "whole logging period" }
+  };
+  var TK = { filter: "all", tf: "ALL", sel: 1, next: 100 };
+
+  function signedHKD(n) { return (n < 0 ? "−" : "+") + money(Math.abs(n)); }
+  function pctStr(x) { return (x >= 0 ? "+" : "−") + Math.abs(x).toFixed(1) + "%"; }
+  function sum(a, k) { return a.reduce(function (s, c) { return s + c[k]; }, 0); }
+  /* A watchlist card has an active alert when it has surged or has fallen to or below your target. */
+  function tkWatchAlert(c) { return c.status === "Watchlist" && (c.alert || c.est <= c.paid); }
+
+  function updateTracker() {
+    var owned = TK_CARDS.filter(function (c) { return c.status === "Owned"; });
+    var watch = TK_CARDS.filter(function (c) { return c.status === "Watchlist"; });
+    var alerts = TK_CARDS.filter(function (c) { return c.alert; });
+    var total = sum(owned, "est"), cost = sum(owned, "paid"), diff = total - cost;
+    var pct = cost > 0 ? diff / cost * 100 : 0;
+    var top = null, topPct = -Infinity;
+    owned.forEach(function (c) { var g = (c.est - c.paid) / c.paid * 100; if (g > topPct) { topPct = g; top = c; } });
+    var ser = TK_SERIES[TK.tf], chg = (ser.r[ser.r.length - 1] / ser.r[0] - 1) * 100;
+    var wAl = watch.filter(tkWatchAlert).length;
+
+    $("tkTotal").textContent = money(total);
+    $("tkSub").textContent = "total estimated value across " + owned.length + " owned card" + (owned.length === 1 ? "" : "s") + " (condition-adjusted)";
+    $("tkGain").className = "chip " + (diff >= 0 ? "good" : "bad");
+    $("tkGain").textContent = signedHKD(diff) + " (" + pctStr(pct) + ") vs. logged cost basis";
+    $("tkAlerts").textContent = alerts.length + " significant price alert" + (alerts.length === 1 ? "" : "s");
+    $("tkNarr").innerHTML = owned.length
+      ? "Your collection is <strong>" + pctStr(pct) + "</strong> against what you paid, led by <strong>" + esc(top.name) + "</strong> (" + pctStr(topPct) + "). Over the " + ser.d + " its estimated value moved <strong>" + pctStr(chg) + "</strong>."
+      : "Log a card you own to see its value here.";
+    $("tkFoot").textContent = "Solid line: condition-adjusted Hong Kong value of your owned cards. Dashed line: cumulative cost you logged (" + money(cost) + "). The history is illustrative.";
+    $("mCost").textContent = money(cost);
+    $("mGain").textContent = signedHKD(diff);
+    $("mGain").className = "v " + (diff >= 0 ? "pos" : "neg");
+    $("mGainPct").textContent = pctStr(pct) + " return";
+    $("mTop").textContent = owned.length ? pctStr(topPct) : "–";
+    $("mTopName").textContent = owned.length ? top.name : "No owned cards";
+    $("mWatch").textContent = watch.length + " card" + (watch.length === 1 ? "" : "s");
+    $("mWatchAl").textContent = wAl + " price alert" + (wAl === 1 ? "" : "s") + " active";
+
+    var counts = { all: TK_CARDS.length, Owned: owned.length, Watchlist: watch.length, alerts: alerts.length };
+    var names = { all: "All", Owned: "Owned", Watchlist: "Watchlist", alerts: "Price alerts" };
+    Array.prototype.forEach.call($("tkFilter").querySelectorAll("button"), function (b) {
+      var f = b.getAttribute("data-f");
+      b.textContent = names[f] + " (" + counts[f] + ")";
+      b.setAttribute("aria-pressed", String(f === TK.filter));
+    });
+    Array.prototype.forEach.call($("tkTf").querySelectorAll("button"), function (b) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-tf") === TK.tf));
+    });
+    drawTkChart(total, cost);
+    drawTkTable();
+  }
+
+  function drawTkChart(total, cost) {
+    var svg = $("tkChart");
+    if (!total) { svg.innerHTML = ""; return; }
+    var ser = TK_SERIES[TK.tf];
+    var pts = ser.r.map(function (r, i) { return { l: ser.l[i], v: Math.round(total * r) }; });
+    var W = 700, H = 210, pl = 64, pr = 24, pt = 20, pb = 32, pw = W - pl - pr, ph = H - pt - pb;
+    var all = pts.map(function (d) { return d.v; }).concat(cost);
+    var minV = Math.floor(Math.min.apply(null, all) * 0.92 / 100) * 100, maxV = Math.ceil(Math.max.apply(null, all) * 1.06 / 100) * 100, range = Math.max(maxV - minV, 200);
+    function X(i) { return pl + i / (pts.length - 1) * pw; }
+    function Y(v) { return pt + ph - (v - minV) / range * ph; }
+    var grid = "", i;
+    for (i = 0; i <= 3; i++) {
+      var gv = Math.round(minV + range * i / 3), gy = Y(gv);
+      grid += '<line class="grid-l" x1="' + pl + '" x2="' + (W - pr) + '" y1="' + gy.toFixed(1) + '" y2="' + gy.toFixed(1) + '"/>' +
+        '<text x="' + (pl - 10) + '" y="' + (gy + 4).toFixed(1) + '" text-anchor="end">' + money(gv) + '</text>';
+    }
+    var cy = Y(cost).toFixed(1);
+    var costSvg = '<line class="c-ask" x1="' + pl + '" x2="' + (W - pr) + '" y1="' + cy + '" y2="' + cy + '"/>' +
+      '<text class="t-ask" x="' + (W - pr) + '" y="' + (Y(cost) - 6).toFixed(1) + '" text-anchor="end">Cost basis ' + money(cost) + '</text>';
+    var line = pts.map(function (d, k) { return (k ? "L" : "M") + X(k).toFixed(1) + " " + Y(d.v).toFixed(1); }).join(" ");
+    var area = line + " L" + X(pts.length - 1).toFixed(1) + " " + (pt + ph) + " L" + X(0).toFixed(1) + " " + (pt + ph) + " Z";
+    var dots = pts.map(function (d, k) {
+      return '<text x="' + X(k).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle">' + esc(d.l) + '</text>' +
+        '<circle class="c-dot" r="5" cx="' + X(k).toFixed(1) + '" cy="' + Y(d.v).toFixed(1) + '" data-l="' + esc(d.l) + '" data-v="' + d.v + '" data-c="' + cost + '"/>';
+    }).join("");
+    var last = pts[pts.length - 1];
+    svg.innerHTML = grid + '<path class="c-area" d="' + area + '"/><path class="c-line" d="' + line + '"/>' + costSvg + dots +
+      '<text class="t-acc" x="' + (X(pts.length - 1) - 8).toFixed(1) + '" y="' + (Y(last.v) - 11).toFixed(1) + '" text-anchor="end">' + money(last.v) + '</text>';
+  }
+
+  function drawTkTable() {
+    var rows = TK_CARDS.filter(function (c) {
+      return TK.filter === "all" || (TK.filter === "alerts" ? c.alert : c.status === TK.filter);
+    });
+    if (!TK_CARDS.some(function (c) { return c.id === TK.sel; })) TK.sel = TK_CARDS[0].id;
+    $("tkTable").innerHTML = '<thead><tr><th>Card</th><th>Status and condition</th><th class="r">Paid / target</th><th class="r">Est. value</th><th class="r">Change</th><th>Signal</th><th><span class="sr-only" style="position:absolute;left:-9999px">Remove</span></th></tr></thead><tbody>' +
+      (rows.length ? rows.map(function (c) {
+        var ch = (c.est - c.paid) / c.paid * 100;
+        return '<tr data-id="' + c.id + '"' + (c.id === TK.sel ? ' class="hl"' : "") + '>' +
+          '<td><b>' + esc(c.name) + '</b><span class="sub">' + esc(c.set) + '</span></td>' +
+          '<td><span class="tag' + (c.status === "Owned" ? " own" : "") + '">' + c.status + '</span><span class="muted small">' + esc(c.cond) + '</span></td>' +
+          '<td class="r num">' + money(c.paid) + '</td><td class="r num"><b>' + money(c.est) + '</b></td>' +
+          '<td class="r num" style="color:var(' + (ch >= 0 ? "--good" : "--bad") + ')">' + pctStr(ch) + '</td>' +
+          '<td><span class="chip ' + c.cls + '">' + esc(c.sig) + '</span></td>' +
+          '<td><button type="button" class="btn-x" data-rm="' + c.id + '" aria-label="Remove ' + esc(c.name) + '">✕</button></td></tr>';
+      }).join("") : '<tr><td colspan="7" class="muted">Nothing in this view yet.</td></tr>') + '</tbody>';
+    var c = TK_CARDS.filter(function (x) { return x.id === TK.sel; })[0];
+    $("coTitle").textContent = c.name + " (" + c.cond + ")";
+    $("coText").textContent = c.note;
+    $("coConf").textContent = (c.n >= 15 ? "High confidence" : c.n >= 5 ? "Medium confidence" : "Low confidence") + " · n = " + c.n;
+  }
+
+  function addTkCard(e) {
+    e.preventDefault();
+    var p = $("tkCard").value.split("|"), cd = $("tkCond").value.split("|");
+    var status = $("tkList").value, paid = parseFloat($("tkPaid").value);
+    if (!(paid >= 10)) { $("tkPaid").focus(); return; }
+    var est = Math.round(parseFloat(p[2]) * parseFloat(cd[1])), pct = (est - paid) / paid * 100, gain = est >= paid;
+    var watch = status === "Watchlist";
+    var card = {
+      id: TK.next++, name: p[0], set: p[1], status: status, cond: cd[0], paid: paid, est: est,
+      alert: Math.abs(pct) >= 15,
+      cls: watch ? "warn" : gain ? "good" : "bad",
+      sig: watch ? (est <= paid ? "★ Buy zone" : "▲ Above target") : gain ? "▲ Rising +" + Math.round(pct) + "%" : "▼ Down " + Math.abs(Math.round(pct)) + "%",
+      n: 17,
+      note: "Condition-adjusted " + cd[0] + " estimate (" + money(est) + ") from 17 sample HK sales, against your logged " + money(paid) + "."
+    };
+    TK_CARDS.unshift(card);
+    TK.sel = card.id;
+    updateTracker();
+  }
+
   function renderAll() {
     var ctx = renderDay1();
-    var later = S.mode === "later";
+    var m = S.mode, later = m === "later", trk = m === "tracker";
+    $("dayGrid").hidden = trk;
     $("later").hidden = !later;
-    $("notShown").hidden = later;
-    $("btnDay1").setAttribute("aria-pressed", String(!later));
+    $("tracker").hidden = !trk;
+    $("notShown").hidden = m !== "day-1";
+    $("btnDay1").setAttribute("aria-pressed", String(m === "day-1"));
     $("btnLater").setAttribute("aria-pressed", String(later));
-    $("tagline").textContent = later
-      ? "Adds what people in Hong Kong actually paid, so the check gets sharper with use."
-      : "Pokémon card price check. Works on Day 1 with no other users.";
+    $("btnTracker").setAttribute("aria-pressed", String(trk));
+    $("banner").textContent = trk ? TK_BANNER : DAY_BANNER;
+    $("tagline").textContent = trk
+      ? "Your collection, valued with what people in Hong Kong actually paid."
+      : later
+        ? "Adds what people in Hong Kong actually paid, so the check gets sharper with use."
+        : "Pokémon card price check. Works on Day 1 with no other users.";
     if (later) renderLater(ctx);
+    if (trk) updateTracker();
   }
 
   function setMode(m) {
@@ -569,18 +850,44 @@ footer.note { font-size: 12px; color: var(--muted); }
   }
   function fromHash() {
     var h = (location.hash || "").replace("#", "");
-    S.mode = h === "later" ? "later" : "day-1";
+    S.mode = h === "later" ? "later" : h === "tracker" ? "tracker" : "day-1";
     renderAll();
   }
 
   /* ----- init ----- */
   $("card").innerHTML = CARDS.map(function (c) { return '<option value="' + c.id + '">' + esc(c.name) + ' · ' + esc(c.set) + '</option>'; }).join("");
-  ["card", "ask", "cond", "chan", "fx", "fee", "srcTcg", "srcEbay"].forEach(function (id) {
+  ["card", "ask", "cond", "chan", "fx", "fee", "srcTcg", "srcEbay", "srcScry", "srcPpt"].forEach(function (id) {
     $(id).addEventListener("input", renderAll);
     $(id).addEventListener("change", renderAll);
   });
   $("btnDay1").addEventListener("click", function () { setMode("day-1"); });
   $("btnLater").addEventListener("click", function () { setMode("later"); });
+  $("btnTracker").addEventListener("click", function () { setMode("tracker"); });
+  $("tkTf").addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b) return;
+    TK.tf = b.getAttribute("data-tf"); updateTracker();
+  });
+  $("tkFilter").addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b) return;
+    TK.filter = b.getAttribute("data-f"); updateTracker();
+  });
+  $("tkForm").addEventListener("submit", addTkCard);
+  $("tkTable").addEventListener("click", function (e) {
+    var rm = e.target.closest("[data-rm]");
+    if (rm) {
+      if (TK_CARDS.length > 1) { TK_CARDS = TK_CARDS.filter(function (c) { return c.id !== parseInt(rm.getAttribute("data-rm"), 10); }); updateTracker(); }
+      return;
+    }
+    var tr = e.target.closest("tr[data-id]");
+    if (tr) { TK.sel = parseInt(tr.getAttribute("data-id"), 10); drawTkTable(); }
+  });
+  $("tkChart").addEventListener("mouseover", function (e) {
+    var d = e.target.closest("circle[data-l]"); if (!d) return;
+    var v = +d.getAttribute("data-v"), df = v - (+d.getAttribute("data-c")), t = $("tkTip");
+    t.textContent = d.getAttribute("data-l") + " · est. " + money(v) + " (" + signedHKD(df) + " vs cost)";
+    t.className = "trk-tip on";
+  });
+  $("tkChart").addEventListener("mouseout", function () { $("tkTip").className = "trk-tip"; });
   window.addEventListener("hashchange", fromHash);
   fromHash();
 })();
